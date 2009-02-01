@@ -15,11 +15,11 @@ Class::Sniff - Look for class composition code smells
 
 =head1 VERSION
 
-Version 0.02
+Version 0.03
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 =head1 SYNOPSIS
 
@@ -64,18 +64,36 @@ C<paths> method.  More on this later).
     ignore => qr/^DBIx::Class/,
  });
 
-The constructor accepts a hashref with one mandatory parameter, the class
-name.  If the class is not loaded into memory, the constructor will still
-work, but nothing will get reported.  You must ensure that your classes is
-already loaded!
+The constructor accepts a hashref with the following parameters:
 
-An optional C<ignore> parameter should be a regex telling C<Class::Sniff>
-what to ignore in class names.  This is useful if you're inheriting from a
-large framework and don't want to report on it.  Be careful with this, though.
-If you have a complicated inheritance hierarchy and you try to ignore
-something other than the root, you will likely get bad information returned.
+=over 4
 
-We do not include the C<UNIVERSAL> class.  This may change in the future.
+=item * C<class>
+
+Mandatory.
+
+The name of the class to sniff.  If the class is not loaded into memory, the
+constructor will still work, but nothing will get reported.  You must ensure
+that your class is already loaded!
+
+=item * C<ignore>
+
+Optional.
+
+This should be a regex telling C<Class::Sniff> what to ignore in class names.
+This is useful if you're inheriting from a large framework and don't want to
+report on it.  Be careful with this, though.  If you have a complicated
+inheritance hierarchy and you try to ignore something other than the root, you
+will likely get bad information returned.
+
+=item * universal
+
+Optional.
+
+If present and true, will attempt to include the C<UNIVERSAL> base class.  If
+a class hierarchy is pruned with C<ignore>, C<UNIVERSAL> may not show up.
+
+=back
 
 =cut
 
@@ -96,6 +114,7 @@ sub new {
         target       => $target_class,
         tree         => undef,
         ignore       => $arg_for->{ignore},
+        universal    => $arg_for->{universal},
     } => $class;
     $self->_initialize;
     return $self;
@@ -302,6 +321,24 @@ sub paths       {
     return $self;
 }
 
+=head2 C<multiple_inheritance>
+
+ my $num_classes = $sniff->multiple_inheritance;
+ my @classes     = $sniff->multiple_inheritance;
+
+Returns a list of all classes which inherit from more than one class.
+
+=head3 Code Smell
+
+See the C<Code Smell> section for C<paths>
+
+=cut
+
+sub multiple_inheritance {
+    my $self = shift;
+    return grep { $self->parents($_) > 1 } $self->classes;
+}
+
 sub _add_relationships {
     my ( $self, $class, @parents ) = @_;
     $self->_add_class($_) foreach $class, @parents;
@@ -386,6 +423,19 @@ This is the regex provided (if any) to the constructor's C<ignore> parameter.
 =cut
 
 sub ignore       { $_[0]->{ignore} }
+
+=head2 C<universal>
+
+ my $universal = $sniff->universal;
+
+This is the value provided (if any) to the 'universal' parameter in the
+constructor.  If it's a true value, 'UNIVERSAL' will be added to the
+hierarchy.  If the hierarchy is pruned via 'ignore' and we don't get down that
+far in the hierarchy, the 'UNIVERSAL' class will not be added.
+
+=cut
+
+sub universal       { $_[0]->{universal} }
 
 =head2 C<classes>
 
@@ -479,8 +529,13 @@ sub methods {
 
 sub _get_parents {
     my ( $self, $class ) = @_;
+    return if $class eq 'UNIVERSAL';
     no strict 'refs';
+
     my @parents = uniq @{"$class\::ISA"};
+    if ( $self->universal && not @parents ) {
+        @parents = 'UNIVERSAL';
+    }
     if ( my $ignore = $self->ignore ) {
         @parents = grep { !/$ignore/ } @parents;
     }
@@ -530,6 +585,39 @@ sub _build_paths {
         }
     }
 }
+
+=head1 CAVEATS AND PLANS
+
+=over 4
+
+=item * Circular Inheritance
+
+Currently, any circular inheritances causes a 'Deep recursion' failure, so
+don't do that.
+
+=item * Package Variables
+
+User-defined package variables in OO code are a code smell, but with versions
+of Perl < 5.10, any subroutine also creates a scalar glob entry of the same
+name, so I've no done a package variable check yet.  This will happen in the
+future (there will be exceptions, such as with @ISA).
+
+=item * C3 Support
+
+I'd like support for alternate method resolution orders.  If your classes use
+C3, you may get erroneous results.  See L<paths> for a workaround.
+
+=item * Exporting
+
+Many packages (such as L<Data::Dumper>) export functions by default and these
+show up as methods.  We'll detect those later.
+
+=item * Duplicate Methods
+
+It's rather common for someone to cut-n-paste a method from one class to
+another.  We'll try and detect that, too.  L<Sub::Information> may help there.
+
+=back
 
 =head1 AUTHOR
 

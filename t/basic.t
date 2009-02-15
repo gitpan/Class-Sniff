@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::Most tests => 31;
+use Test::Most tests => 32;
 use Class::Sniff;
 
 {
@@ -31,15 +31,12 @@ use Class::Sniff;
     sub quux { }   # no inheritance
 }
 
-# Constructor with tree, graph, and ascii representations.
+# Constructor with graph and ascii representations.
 
 can_ok 'Class::Sniff', 'new';
 $DB::single = 1;
 isa_ok my $sniff = Class::Sniff->new({ class => 'Grandchild'}), 'Class::Sniff',
   '... and the object it returns';
-
-can_ok $sniff, 'tree';
-isa_ok $sniff->tree, 'Tree', '... and the object it returns';
 
 can_ok $sniff, 'graph';
 isa_ok $sniff->graph, 'Graph::Easy', '... and the object it returns';
@@ -123,3 +120,17 @@ eq_or_diff [ $sniff->classes ],
   [ qw/Grandchild Child1 Abstract UNIVERSAL Child2/ ],
   '... and it should be returned when we ask for classes';
 
+{
+    package Grandchild2;
+    our @ISA = 'Child1';
+
+    sub new { return bless {} => shift }
+}
+
+ok my $sniff2 = Class::Sniff->new({class => Grandchild2->new}),
+    'Class::Sniff should access a class instance in the contructor';
+
+can_ok $sniff2, 'combine_graphs';
+isa_ok my $graph = $sniff2->combine_graphs($sniff),
+    'Graph::Easy', '... and the object it returns';
+explain $graph->as_ascii;

@@ -17,6 +17,7 @@ my $builder = Module::Build->new(
         'List::MoreUtils'   => 0.22,
         'Sub::Identify'     => 0.03,
         'Text::SimpleTable' => 0.05,
+        'perl'              => 5.006,
     },
     build_requires     => { 'Test::Most' => 0.20, },
     add_to_cleanup     => ['Class-Sniff-*'],

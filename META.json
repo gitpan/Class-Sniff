@@ -33,25 +33,26 @@
             "Graph::Easy" : "0.64",
             "List::MoreUtils" : "0.22",
             "Sub::Identify" : "0.03",
-            "Text::SimpleTable" : "0.05"
+            "Text::SimpleTable" : "0.05",
+            "perl" : "5.006"
          }
       }
    },
    "provides" : {
       "Class::Sniff" : {
          "file" : "lib/Class/Sniff.pm",
-         "version" : "0.09_01"
+         "version" : "0.10"
       },
       "Class::Sniff::App" : {
          "file" : "lib/Class/Sniff/App.pm",
-         "version" : "0.09"
+         "version" : "0.10"
       }
    },
-   "release_status" : "testing",
+   "release_status" : "stable",
    "resources" : {
       "license" : [
          "http://dev.perl.org/licenses/"
       ]
    },
-   "version" : "0.09_01"
+   "version" : "0.10"
 }
